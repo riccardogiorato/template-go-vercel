@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 func MyWeather(w http.ResponseWriter, r *http.Request) {
@@ -15,11 +16,16 @@ func MyWeather(w http.ResponseWriter, r *http.Request) {
 	// IP User
 	userIpAddress := r.RemoteAddr
 	// Response API Location
-	userLocationResponse, err := http.Get("https://ipapi.co/" + userIpAddress + "/latlong/")
+	urlLocationApi := "https://api.freegeoip.app/json/" + userIpAddress + "?apikey=" + os.Getenv("API_KEY_FREEGEOIP")
+
+	fmt.Println("URL Location API:", urlLocationApi)
+
+	userLocationResponse, err := http.Get(urlLocationApi)
 	// Get the Location body
 	userLocationBody, err := ioutil.ReadAll(userLocationResponse.Body)
 
 	resp["location"] = string(userLocationBody)
+
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
 		fmt.Println("Error happened in JSON marshal. Err: %s", err)
