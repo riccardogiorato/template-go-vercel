@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 )
@@ -24,9 +24,9 @@ func MyWeather(w http.ResponseWriter, r *http.Request) {
 	// Response API Location
 	urlLocationApi := "https://api.freegeoip.app/json/" + userIpAddress + "?apikey=" + os.Getenv("API_KEY_FREEGEOIP")
 	fmt.Println("Location API URL:", urlLocationApi)
-	userLocationResponse, err := http.Get(urlLocationApi)
+	userLocationResponse, _ := http.Get(urlLocationApi)
 	// Get the Location body
-	userLocationBody, err := ioutil.ReadAll(userLocationResponse.Body)
+	userLocationBody, _ := io.ReadAll(userLocationResponse.Body)
 	userLocationJson := string(userLocationBody)
 	fmt.Println("Location API Json String:", userLocationJson)
 	var userLocation map[string]interface{}
@@ -38,8 +38,8 @@ func MyWeather(w http.ResponseWriter, r *http.Request) {
 	// Response API Weather
 	urlWeatherApi := "https://api.openweathermap.org/data/2.5/weather?lat=" + resp["latitude"] + "&lon=" + resp["longitude"] + "&appid=" + os.Getenv("API_KEY_OPENWEATHER")
 	fmt.Println("Weather API Json String:", urlWeatherApi)
-	weatherApiResponse, err := http.Get(urlWeatherApi)
-	weatherApiBody, err := ioutil.ReadAll(weatherApiResponse.Body)
+	weatherApiResponse, _ := http.Get(urlWeatherApi)
+	weatherApiBody, _ := io.ReadAll(weatherApiResponse.Body)
 	weatherApiJson := string(weatherApiBody)
 
 	resp["weather"] = weatherApiJson
@@ -50,5 +50,4 @@ func MyWeather(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Write(jsonResp)
 	}
-	return
 }
