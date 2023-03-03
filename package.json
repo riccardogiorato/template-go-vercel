@@ -1,12 +1,11 @@
 {
   "name": "template-go-vercel",
   "version": "1.0.0",
-  "main": "index.js",
   "repository": "https://github.com/riccardogiorato/template-go-vercel",
   "author": "riccardogiorato <https://riccardogiorato.com/>",
   "license": "MIT",
   "dependencies": {
-    "vercel": "^28.4.12"
+    "vercel": "^28.16.12"
   },
   "scripts": {
     "setup": "yarn vercel login && yarn vercel link",
