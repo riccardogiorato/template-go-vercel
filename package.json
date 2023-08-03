@@ -5,7 +5,7 @@
   "author": "riccardogiorato <https://riccardogiorato.com/>",
   "license": "MIT",
   "dependencies": {
-    "vercel": "^28.16.12"
+    "vercel": "^31.2.2"
   },
   "scripts": {
     "setup": "yarn vercel login && yarn vercel link",
