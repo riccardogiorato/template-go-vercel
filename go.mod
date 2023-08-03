@@ -1,6 +1,6 @@
 module template-go-vercel
 
-go 1.17
+go 1.20
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
