@@ -5,11 +5,12 @@
   "author": "riccardogiorato <https://riccardogiorato.com/>",
   "license": "MIT",
   "dependencies": {
-    "vercel": "^31.2.2"
+    "vercel": "^37.5.4"
   },
   "scripts": {
     "setup": "yarn vercel login && yarn vercel link",
     "start": "yarn vercel dev",
     "dev": "yarn start"
-  }
+  },
+  "packageManager": "yarn@4.5.0"
 }
