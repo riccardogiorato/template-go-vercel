@@ -9,9 +9,9 @@ Serverless Functions running on Vercel: https://template-go-api.vercel.app/
 ## Getting Started
 
 1. Clone the repository from here: https://github.com/riccardogiorato/template-go-vercel
-2. Do "yarn dev" to install dependencies
-3. Do "yarn setup" to login and link your Vercel account to this project
-4. Type "yarn start" or "yarn vercel dev" to start running your Go serverless functions locally!
+2. Do "pnpm install" to install dependencies
+3. Do "pnpm setup" to login and link your Vercel account to this project
+4. Type "pnpm start" or "pnpm vercel dev" to start running your Go serverless functions locally!
 
 ## Article
 
