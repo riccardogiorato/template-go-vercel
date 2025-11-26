@@ -14,10 +14,10 @@ func GenerateSpeech(w http.ResponseWriter, r *http.Request) {
 	client := together.NewClient(option.WithAPIKey(os.Getenv("TOGETHER_API_KEY")))
 
 	resp, err := client.Audio.New(context.Background(), together.AudioNewParams{
-		Model:          together.AudioNewParamsModelCartesiaSonic,
+		Model:          "cartesia/sonic-2",
 		Input:          "Today is a wonderful day to build something people love!",
-		Voice:          together.AudioNewParamsVoiceFriendlySidekick,
-		ResponseFormat: together.AudioNewParamsResponseFormatMP3,
+		Voice:          "friendly sidekick",
+		ResponseFormat: "mp3",
 	})
 	if err != nil {
 		http.Error(w, "Error generating speech", http.StatusInternalServerError)
