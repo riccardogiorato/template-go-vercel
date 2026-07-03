@@ -7,8 +7,8 @@ import (
 )
 
 func Json(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	resp := make(map[string]string)
 	resp["message"] = "Hello World from Go! 👋"
 	resp["language"] = "go"

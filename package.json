@@ -5,7 +5,7 @@
   "author": "riccardogiorato <https://riccardogiorato.com/>",
   "license": "MIT",
   "dependencies": {
-    "vercel": "^48.11.0"
+    "vercel": "^54.20.1"
   },
   "scripts": {
     "setup": "pnpm vercel login && pnpm vercel link",

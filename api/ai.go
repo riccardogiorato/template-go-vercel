@@ -22,6 +22,8 @@ type AIRequest struct {
 	Action   string `json:"action,omitempty"` // for transcription: transcribe or translate
 }
 
+const defaultAIModel = "Qwen/Qwen2.5-7B-Instruct-Turbo"
+
 func Handler(w http.ResponseWriter, r *http.Request) {
 	var req AIRequest
 
@@ -70,79 +72,94 @@ func handleChat(w http.ResponseWriter, client together.Client, prompt string) {
 	if prompt == "" {
 		prompt = "User: debate the pros and cons of AI\nAssistant:"
 	}
-	resp, err := client.Completions.New(context.Background(), together.CompletionNewParams{
-		Model:     together.CompletionNewParamsModel(together.ChatCompletionNewParamsModelQwenQwen2_5_7BInstructTurbo),
-		Prompt:    prompt,
-		MaxTokens: together.Int(100),
-	})
-	if err != nil || len(resp.Choices) == 0 {
+	content, err := generateChatContent(client, prompt, 100)
+	if err != nil {
 		http.Error(w, "Error generating chat", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"response": resp.Choices[0].Text})
+	json.NewEncoder(w).Encode(map[string]string{"response": content})
+}
+
+func generateChatContent(client together.Client, prompt string, maxTokens int64) (string, error) {
+	resp, err := client.Chat.Completions.New(context.Background(), together.ChatCompletionNewParams{
+		Model: defaultAIModel,
+		Messages: []together.ChatCompletionNewParamsMessageUnion{
+			{
+				OfChatCompletionNewsMessageChatCompletionUserMessageParam: &together.ChatCompletionNewParamsMessageChatCompletionUserMessageParam{
+					Role: "user",
+					Content: together.ChatCompletionNewParamsMessageChatCompletionUserMessageParamContentUnion{
+						OfString: together.String(prompt),
+					},
+				},
+			},
+		},
+		MaxTokens: together.Int(maxTokens),
+	})
+	if err != nil {
+		return "", err
+	}
+	if resp == nil || len(resp.Choices) == 0 {
+		return "", fmt.Errorf("empty chat response")
+	}
+	choice := resp.Choices[0]
+	if choice.Message.Content != "" {
+		return choice.Message.Content, nil
+	}
+	return choice.Text, nil
 }
 
 func handleText(w http.ResponseWriter, client together.Client, prompt string) {
 	if prompt == "" {
 		prompt = "Write a short story about a robot."
 	}
-	resp, err := client.Completions.New(context.Background(), together.CompletionNewParams{
-		Model:     together.CompletionNewParamsModel(together.ChatCompletionNewParamsModelQwenQwen2_5_7BInstructTurbo),
-		Prompt:    prompt,
-		MaxTokens: together.Int(100),
-	})
-	if err != nil || len(resp.Choices) == 0 {
+	content, err := generateChatContent(client, prompt, 200)
+	if err != nil {
 		http.Error(w, "Error generating text", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"text": resp.Choices[0].Text})
+	json.NewEncoder(w).Encode(map[string]string{"text": content})
 }
 
 func handleImage(w http.ResponseWriter, client together.Client, prompt string) {
 	if prompt == "" {
 		prompt = "A futuristic robot in a cityscape"
 	}
-	resp, err := client.Images.New(context.Background(), together.ImageNewParams{
-		Prompt: prompt,
-		Model:  together.ImageNewParamsModelBlackForestLabsFlux1SchnellFree,
-		Width:  together.Int(1024),
-		Height: together.Int(1024),
-		Steps:  together.Int(4),
-		N:      together.Int(1),
+	resp, err := client.Images.Generate(context.Background(), together.ImageGenerateParams{
+		Prompt:         prompt,
+		Model:          "black-forest-labs/FLUX.1-schnell",
+		ResponseFormat: together.ImageGenerateParamsResponseFormatURL,
+		N:              together.Int(1),
 	})
 	if err != nil || len(resp.Data) == 0 {
 		http.Error(w, "Error generating image", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"image_url": resp.Data[0].URL})
+	// Response data is a union type; extract the URL variant.
+	imageData := resp.Data[0].AsURL()
+	json.NewEncoder(w).Encode(map[string]string{"image_url": imageData.URL})
 }
 
 func handleVision(w http.ResponseWriter, client together.Client, prompt string) {
 	if prompt == "" {
 		prompt = "You are a UX/UI designer. Describe this Trello board screenshot in detail. Pay close attention to background color, text color, font size, font family, padding, margin, border, etc. Use the exact text from the screenshot."
 	}
-	resp, err := client.Completions.New(context.Background(), together.CompletionNewParams{
-		Model:       together.CompletionNewParamsModel(together.ChatCompletionNewParamsModelQwenQwen2_5_7BInstructTurbo),
-		Prompt:      prompt,
-		MaxTokens:   together.Int(500),
-		Temperature: together.Float(0.2),
-	})
-	if err != nil || len(resp.Choices) == 0 {
+	content, err := generateChatContent(client, prompt, 500)
+	if err != nil {
 		http.Error(w, "Error describing image", http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprint(w, resp.Choices[0].Text)
+	fmt.Fprint(w, content)
 }
 
 func handleSpeech(w http.ResponseWriter, client together.Client, input string) {
 	if input == "" {
 		input = "Today is a wonderful day to build something people love!"
 	}
-	resp, err := client.Audio.New(context.Background(), together.AudioNewParams{
-		Model:          "cartesia/sonic-2",
+	resp, err := client.Audio.Speech.New(context.Background(), together.AudioSpeechNewParams{
+		Model:          together.AudioSpeechNewParamsModelCartesiaSonic,
 		Input:          input,
 		Voice:          "friendly sidekick",
-		ResponseFormat: "mp3",
+		ResponseFormat: together.AudioSpeechNewParamsResponseFormatMP3,
 	})
 	if err != nil {
 		http.Error(w, "Error generating speech", http.StatusInternalServerError)
@@ -179,8 +196,11 @@ func handleTranscription(w http.ResponseWriter, client together.Client, audioURL
 
 	if action == "translate" {
 		translationResp, err := client.Audio.Translations.New(context.Background(), together.AudioTranslationNewParams{
-			File:  resp.Body,
-			Model: "openai/whisper-large-v3",
+			File: together.AudioTranslationNewParamsFileUnion{
+				OfFile: resp.Body,
+			},
+			Model:          together.AudioTranslationNewParamsModelOpenAIWhisperLargeV3,
+			ResponseFormat: together.AudioTranslationNewParamsResponseFormatJson,
 		})
 		if err != nil {
 			http.Error(w, "Error translating", http.StatusInternalServerError)
@@ -189,9 +209,12 @@ func handleTranscription(w http.ResponseWriter, client together.Client, audioURL
 		fmt.Fprintf(w, "Translation: %s", translationResp.Text)
 	} else {
 		transcriptionResp, err := client.Audio.Transcriptions.New(context.Background(), together.AudioTranscriptionNewParams{
-			File:     resp.Body,
-			Model:    "openai/whisper-large-v3",
-			Language: together.String("en"),
+			File: together.AudioTranscriptionNewParamsFileUnion{
+				OfFile: resp.Body,
+			},
+			Model:          together.AudioTranscriptionNewParamsModelOpenAIWhisperLargeV3,
+			ResponseFormat: together.AudioTranscriptionNewParamsResponseFormatJson,
+			Language:       together.String("en"),
 		})
 		if err != nil {
 			http.Error(w, "Error transcribing", http.StatusInternalServerError)
@@ -232,19 +255,15 @@ func handleJSON(w http.ResponseWriter, client together.Client, prompt string) {
 	if prompt == "" {
 		prompt = "Return only a JSON object representing a person with name, age, and city. No additional text."
 	}
-	resp, err := client.Completions.New(context.Background(), together.CompletionNewParams{
-		Model:     together.CompletionNewParamsModel(together.ChatCompletionNewParamsModelQwenQwen2_5_7BInstructTurbo),
-		Prompt:    prompt,
-		MaxTokens: together.Int(100),
-	})
-	if err != nil || len(resp.Choices) == 0 {
+	content, err := generateChatContent(client, prompt, 100)
+	if err != nil {
 		http.Error(w, "Error generating JSON", http.StatusInternalServerError)
 		return
 	}
 	var data interface{}
-	if json.Unmarshal([]byte(resp.Choices[0].Text), &data) == nil {
+	if json.Unmarshal([]byte(content), &data) == nil {
 		json.NewEncoder(w).Encode(data)
 	} else {
-		json.NewEncoder(w).Encode(map[string]string{"json": resp.Choices[0].Text})
+		json.NewEncoder(w).Encode(map[string]string{"json": content})
 	}
 }
